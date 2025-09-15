@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Map, { Marker, Popup } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { FaLocationCrosshairs } from "react-icons/fa6";
 
 // --- Style Constants ---
 const HYBRID_STYLE = `https://api.maptiler.com/maps/hybrid/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`;
@@ -54,19 +55,48 @@ function NotePopup({ note, onClose }) {
 
 // --- Main Map Component ---
 export default function MapComponent() {
+    const mapRef = useRef(null);
     const [notes, setNotes] = useState([]);
     const [newNote, setNewNote] = useState(null);
     const [currentNote, setCurrentNote] = useState(null);
     const [viewState, setViewState] = useState({ longitude: -100, latitude: 40, zoom: 2 });
     const [mapStyle, setMapStyle] = useState(HYBRID_STYLE);
 
+    const goToUserLocation = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser.");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                if (mapRef.current) {
+                    mapRef.current.flyTo({
+                        center: [position.coords.longitude, position.coords.latitude],
+                        zoom: 13,
+                        duration: 2500,
+                        essential: true
+                    });
+                }
+            },
+            () => {
+                alert("Unable to retrieve your location. Please enable location services.");
+            }
+        );
+    };
+
     useEffect(() => {
+        // Go to user's location on initial load
+        goToUserLocation();
+
+        // Fetch notes from the API
         const fetchNotes = async () => {
             const res = await fetch('/api/notes');
             const data = await res.json();
             setNotes(data);
         };
         fetchNotes();
+
     }, []);
 
     const handleMapClick = (e) => {
@@ -95,11 +125,24 @@ export default function MapComponent() {
 
     return (
         <>
-            <button onClick={toggleMapStyle} className="absolute top-4 right-4 z-10 bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors">
-                {mapStyle === HYBRID_STYLE ? 'Streets' : 'Satellite'}
-            </button>
+            <div className="absolute top-4 right-4 z-10 flex flex-row gap-2">
+                <button
+                    onClick={toggleMapStyle}
+                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors"
+                >
+                    {mapStyle === HYBRID_STYLE ? 'Streets' : 'Satellite'}
+                </button>
+
+                <button
+                    onClick={goToUserLocation}
+                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors"
+                >
+                    <FaLocationCrosshairs />
+                </button>
+            </div>
             <div className="h-screen w-screen">
                 <Map
+                    ref={mapRef}
                     {...viewState}
                     onMove={evt => setViewState(evt.viewState)}
                     mapStyle={mapStyle}
