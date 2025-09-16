@@ -6,6 +6,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { FaLocationCrosshairs } from "react-icons/fa6";
 import { v4 as uuidv4 } from 'uuid';
 import { IoIosCloseCircleOutline } from "react-icons/io";
+import { MdOutlineEmojiEmotions } from "react-icons/md";
+import EmojiPicker from 'emoji-picker-react';
 
 // --- Style Constants ---
 const HYBRID_STYLE = `https://api.maptiler.com/maps/hybrid/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`;
@@ -45,15 +47,44 @@ function AddNoteForm({ onSubmit, onImageAdd }) {
     );
 }
 
-function NotePopup({ note, onClose }) {
+function NotePopup({ note, onClose, onReaction }) {
+    const [showPicker, setShowPicker] = useState(false);
+
+    const onEmojiClick = (emojiData) => {
+        onReaction(emojiData.emoji);
+        setShowPicker(false);
+    };
+
     return (
-        <div className="bg-gray-800 text-white p-4 rounded-lg shadow-xl w-64 border border-gray-600 relative">
-            <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white">
+        <div className="bg-gray-800 text-white p-2 rounded-lg shadow-xl w-64 border border-gray-600 relative">
+            <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">
                 <IoIosCloseCircleOutline />
             </button>
             <p className="text-sm font-bold text-cyan-400 mb-1">{note.user_name || 'Anonymous'}</p>
+
             <p className="text-gray-200 mb-2">{note.text}</p>
             <p className="text-xs text-gray-500">Posted on {new Date(note.created_at).toLocaleDateString()}</p>
+
+            {/* --- Reactions UI --- */}
+            <div className="mt-2 border-t border-gray-700 pt-2">
+                <ReactionsDisplay
+                    reactions={note.reactions || []}
+                    onReactionClick={onReaction}
+                    userId={getUserProfile().id}
+                />
+                <button
+                    onClick={() => setShowPicker(!showPicker)}
+                    className="mt-2 text-gray-400 hover:text-white"
+                    title="Add reaction"
+                >
+                    <span className="text-2xl"><MdOutlineEmojiEmotions /></span>
+                </button>
+            </div>
+            {showPicker && (
+                <div className="absolute z-20 bottom-0 left-full ml-2">
+                    <EmojiPicker onEmojiClick={onEmojiClick} theme="dark" />
+                </div>
+            )}
         </div>
     );
 }
@@ -77,6 +108,35 @@ const getUserProfile = () => {
     };
     localStorage.setItem('geoNotesUserProfile', JSON.stringify(newProfile));
     return newProfile;
+};
+
+const ReactionsDisplay = ({ reactions, onReactionClick, userId }) => {
+    // Group reactions by emoji
+    const groupedReactions = reactions.reduce((acc, reaction) => {
+        acc[reaction.emoji] = acc[reaction.emoji] || { count: 0, users: [] };
+        acc[reaction.emoji].count++;
+        acc[reaction.emoji].users.push(reaction.user_id);
+        return acc;
+    }, {});
+
+    return (
+        <div className="flex flex-wrap gap-2 mt-2">
+            {Object.entries(groupedReactions).map(([emoji, data]) => {
+                const userHasReacted = data.users.includes(userId);
+                return (
+                    <button
+                        key={emoji}
+                        onClick={() => onReactionClick(emoji)}
+                        className={`px-2 py-1 rounded-full text-sm transition-colors ${userHasReacted ? 'bg-blue-500 border-blue-400' : 'bg-gray-600 border-gray-500'
+                            } border`}
+                        title={`Reacted by ${data.count} users`}
+                    >
+                        {emoji} {data.count}
+                    </button>
+                );
+            })}
+        </div>
+    );
 };
 
 // --- Main Map Component ---
@@ -164,6 +224,33 @@ export default function MapComponent() {
         setMapStyle(currentStyle => currentStyle === HYBRID_STYLE ? STREETS_STYLE : HYBRID_STYLE);
     };
 
+    const handleReaction = async (noteId, emoji) => {
+        const userProfile = getUserProfile();
+
+        const response = await fetch(`/api/notes/${noteId}/react`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: userProfile.id, emoji }),
+        });
+
+        if (response.ok) {
+            const updatedReactions = await response.json();
+
+            // Update the state of the specific note immutably
+            setNotes(prevNotes =>
+                prevNotes.map(note =>
+                    note.id === noteId ? { ...note, reactions: updatedReactions } : note
+                )
+            );
+            // Also update currentNote if it's the one being reacted to
+            setCurrentNote(prevNote =>
+                prevNote && prevNote.id === noteId ? { ...prevNote, reactions: updatedReactions } : prevNote
+            );
+        } else {
+            console.error("Failed to update reaction");
+        }
+    };
+
     return (
         <>
             <div className="absolute top-4 left-4 z-10">
@@ -209,8 +296,18 @@ export default function MapComponent() {
                         </Popup>
                     )}
                     {currentNote && (
-                        <Popup longitude={JSON.parse(currentNote.geom).coordinates[0]} latitude={JSON.parse(currentNote.geom).coordinates[1]} onClose={() => setCurrentNote(null)} closeButton={false} className="modern-popup" anchor="left">
-                            <NotePopup note={currentNote} onClose={() => setCurrentNote(null)} />
+                        <Popup
+                            longitude={JSON.parse(currentNote.geom).coordinates[0]}
+                            latitude={JSON.parse(currentNote.geom).coordinates[1]}
+                            onClose={() => setCurrentNote(null)}
+                            closeButton={false}
+                            className="modern-popup" anchor="left"
+                        >
+                            <NotePopup
+                                note={currentNote}
+                                onClose={() => setCurrentNote(null)}
+                                onReaction={(emoji) => handleReaction(currentNote.id, emoji)}
+                            />
                         </Popup>
                     )}
                 </Map>

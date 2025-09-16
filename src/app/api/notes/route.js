@@ -3,9 +3,31 @@ import pool from '../../../lib/db';
 
 export async function GET() {
     try {
-        const result = await pool.query(
-            'SELECT id, text, ST_AsGeoJSON(geom) AS geom, created_at, user_name FROM notes WHERE visibility = 0'
-        );
+        const query = `
+            SELECT
+                n.id,
+                n.text,
+                ST_AsGeoJSON(n.geom) AS geom,
+                n.created_at,
+                n.user_name,
+                COALESCE(
+                    (SELECT jsonb_agg(r)
+                     FROM (
+                        SELECT emoji, user_id
+                        FROM reactions
+                        WHERE note_id = n.id
+                     ) AS r
+                    ), '[]'::jsonb
+                ) AS reactions
+            FROM
+                notes n
+            WHERE
+                n.visibility = 0
+            ORDER BY
+                n.created_at DESC;
+        `;
+
+        const result = await pool.query(query);
         return NextResponse.json(result.rows, { status: 200 });
     } catch (err) {
         console.error('GET /api/notes error:', err);
