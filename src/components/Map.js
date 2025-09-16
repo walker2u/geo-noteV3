@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Map, { Marker, Popup } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { FaLocationCrosshairs } from "react-icons/fa6";
+import { v4 as uuidv4 } from 'uuid';
+import { IoIosCloseCircleOutline } from "react-icons/io";
 
 // --- Style Constants ---
 const HYBRID_STYLE = `https://api.maptiler.com/maps/hybrid/style.json?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`;
@@ -46,12 +48,36 @@ function AddNoteForm({ onSubmit, onImageAdd }) {
 function NotePopup({ note, onClose }) {
     return (
         <div className="bg-gray-800 text-white p-4 rounded-lg shadow-xl w-64 border border-gray-600 relative">
-            <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+            <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white">
+                <IoIosCloseCircleOutline />
+            </button>
+            <p className="text-sm font-bold text-cyan-400 mb-1">{note.user_name || 'Anonymous'}</p>
             <p className="text-gray-200 mb-2">{note.text}</p>
             <p className="text-xs text-gray-500">Posted on {new Date(note.created_at).toLocaleDateString()}</p>
         </div>
     );
 }
+
+const generateRandomName = () => {
+    const adjectives = ["Brave", "Clever", "Witty", "Curious", "Silent", "Lone", "Swift", "Wise"];
+    const animals = ["Badger", "Wombat", "Eagle", "Fox", "Wolf", "Jaguar", "Panda", "Owl"];
+    const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const animal = animals[Math.floor(Math.random() * animals.length)];
+    return `${adj} ${animal}`;
+};
+
+const getUserProfile = () => {
+    const profileString = localStorage.getItem('geoNotesUserProfile');
+    if (profileString) {
+        return JSON.parse(profileString);
+    }
+    const newProfile = {
+        id: uuidv4(),
+        name: generateRandomName()
+    };
+    localStorage.setItem('geoNotesUserProfile', JSON.stringify(newProfile));
+    return newProfile;
+};
 
 // --- Main Map Component ---
 export default function MapComponent() {
@@ -61,6 +87,7 @@ export default function MapComponent() {
     const [currentNote, setCurrentNote] = useState(null);
     const [viewState, setViewState] = useState({ longitude: -100, latitude: 40, zoom: 2 });
     const [mapStyle, setMapStyle] = useState(HYBRID_STYLE);
+    const [userName, setUserName] = useState("");
 
     const goToUserLocation = () => {
         if (!navigator.geolocation) {
@@ -86,10 +113,9 @@ export default function MapComponent() {
     };
 
     useEffect(() => {
-        // Go to user's location on initial load
-        goToUserLocation();
+        const userProfile = getUserProfile();
+        setUserName(userProfile.name);
 
-        // Fetch notes from the API
         const fetchNotes = async () => {
             const res = await fetch('/api/notes');
             const data = await res.json();
@@ -97,7 +123,14 @@ export default function MapComponent() {
         };
         fetchNotes();
 
+        goToUserLocation();
     }, []);
+
+    const handleNameSave = () => {
+        const profile = getUserProfile();
+        profile.name = userName;
+        localStorage.setItem('geoNotesUserProfile', JSON.stringify(profile));
+    };
 
     const handleMapClick = (e) => {
         if (e.originalEvent.target.closest('.maplibregl-marker')) return;
@@ -109,11 +142,19 @@ export default function MapComponent() {
     const handleAddNote = async (e) => {
         e.preventDefault();
         const text = e.target.text.value;
+        const userProfile = getUserProfile();
+
         const res = await fetch('/api/notes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...newNote, text }),
+            body: JSON.stringify({
+                ...newNote,
+                text,
+                userId: userProfile.id,
+                userName: userProfile.name
+            }),
         });
+
         const data = await res.json();
         setNotes([...notes, data]);
         setNewNote(null);
@@ -125,6 +166,16 @@ export default function MapComponent() {
 
     return (
         <>
+            <div className="absolute top-4 left-4 z-10">
+                <input
+                    type="text"
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    onBlur={handleNameSave} // Save when the user clicks away
+                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg border border-gray-600 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition"
+                    placeholder="Your anonymous name"
+                />
+            </div>
             <div className="absolute top-4 right-4 z-10 flex flex-row gap-2">
                 <button
                     onClick={toggleMapStyle}

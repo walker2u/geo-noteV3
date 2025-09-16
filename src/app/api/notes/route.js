@@ -4,7 +4,7 @@ import pool from '../../../lib/db';
 export async function GET() {
     try {
         const result = await pool.query(
-            'SELECT id, text, ST_AsGeoJSON(geom) AS geom, created_at FROM notes WHERE visibility = 0'
+            'SELECT id, text, ST_AsGeoJSON(geom) AS geom, created_at, user_name FROM notes WHERE visibility = 0'
         );
         return NextResponse.json(result.rows, { status: 200 });
     } catch (err) {
@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function POST(request) {
     try {
-        const { text, lat, lng } = await request.json();
+        const { text, lat, lng, userId, userName } = await request.json();
 
         if (
             typeof text !== 'string' ||
@@ -26,10 +26,10 @@ export async function POST(request) {
         }
 
         const insertResult = await pool.query(
-            `INSERT INTO notes (text, geom)
-       VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326))
-       RETURNING id, text, ST_AsGeoJSON(geom) AS geom, created_at`,
-            [text, lng, lat]  // Note: ST_MakePoint(longitude, latitude)
+            `INSERT INTO notes (text, geom,user_id,user_name)
+       VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326),$4,$5)
+       RETURNING id, text, ST_AsGeoJSON(geom) AS geom, created_at,user_name`,
+            [text, lng, lat, userId, userName]  // Note: ST_MakePoint(longitude, latitude)
         );
 
         const newNote = insertResult.rows[0];
