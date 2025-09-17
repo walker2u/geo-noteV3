@@ -251,6 +251,8 @@ export default function MapComponent() {
         }
     };
 
+    const isZoomedOut = viewState.zoom < 4;
+
     return (
         <>
             <div className="absolute top-4 left-4 z-10">
@@ -285,7 +287,15 @@ export default function MapComponent() {
                     onMove={evt => setViewState(evt.viewState)}
                     mapStyle={mapStyle}
                     onClick={handleMapClick}
-                    projection={viewState.zoom < 4 ? 'globe' : 'mercator'}
+                    // The library will automatically flatten it at high zoom levels.
+                    // This eliminates the unstable, dynamic switching.
+                    projection="globe"
+
+                    // Keep the safeguards. Disable tilting when zoomed out to prevent
+                    // the original error and provide a better user experience.
+                    pitchWithRotate={!isZoomedOut}
+                    dragRotate={!isZoomedOut}
+                    maxPitch={isZoomedOut ? 0 : 85}
                 >
                     {notes.map(note => (
                         <Marker key={note.id} longitude={JSON.parse(note.geom).coordinates[0]} latitude={JSON.parse(note.geom).coordinates[1]} onClick={(e) => { e.originalEvent.stopPropagation(); setCurrentNote(note); setNewNote(null); }} />
