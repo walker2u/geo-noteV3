@@ -15,7 +15,7 @@ const STREETS_STYLE = `https://api.maptiler.com/maps/streets/style.json?key=${pr
 
 function AddNoteForm({ onSubmit, onImageAdd }) {
     return (
-        <div className="bg-gray-800 text-white p-4 rounded-lg shadow-xl w-72 border border-gray-600">
+        <div className="bg-gray-800 text-white p-4 rounded-lg shadow-xl w-[90vw] max-w-sm border border-gray-600">
             <h3 className="text-lg font-semibold mb-3 text-center">Add a New Note</h3>
             <form onSubmit={onSubmit}>
                 <textarea
@@ -56,7 +56,7 @@ function NotePopup({ note, onClose, onReaction }) {
     };
 
     return (
-        <div className="bg-gray-800 text-white p-2 rounded-lg shadow-xl w-64 border border-gray-600 relative">
+        <div className="bg-gray-800 text-white p-4 rounded-lg shadow-xl w-[90vw] max-w-sm border border-gray-600 relative">
             <button onClick={onClose} className="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">
                 <IoIosCloseCircleOutline />
             </button>
@@ -81,7 +81,7 @@ function NotePopup({ note, onClose, onReaction }) {
                 </button>
             </div>
             {showPicker && (
-                <div className="absolute z-20 bottom-0 left-full ml-2">
+                <div className="absolute z-20 bottom-full right-0 mb-2 md:bottom-0 md:left-full md:ml-2">
                     <EmojiPicker onEmojiClick={onEmojiClick} theme="dark" />
                 </div>
             )}
@@ -255,29 +255,32 @@ export default function MapComponent() {
 
     return (
         <>
-            <div className="absolute top-4 left-4 z-10">
+            {/* top left user input */}
+            <div className="absolute top-2 left-2 z-10 md:top-4 md:left-4">
                 <input
                     type="text"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
-                    onBlur={handleNameSave} // Save when the user clicks away
-                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg border border-gray-600 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition"
-                    placeholder="Your anonymous name"
+                    onBlur={handleNameSave}
+                    className="bg-gray-800 text-white font-semibold py-2 px-3 md:px-4 text-sm md:text-base rounded-full shadow-lg border border-gray-600 focus:ring-2 focus:ring-cyan-500 focus:outline-none transition w-36 md:w-auto"
+                    placeholder="Your name"
                 />
             </div>
-            <div className="absolute top-4 right-4 z-10 flex flex-row gap-2">
+            {/* top right buttons */}
+            <div className="absolute top-2 right-2 z-10 flex flex-col md:flex-row gap-2 md:top-4 md:right-4">
                 <button
                     onClick={toggleMapStyle}
-                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors"
+                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors text-sm"
                 >
                     {mapStyle === HYBRID_STYLE ? 'Streets' : 'Satellite'}
                 </button>
 
                 <button
                     onClick={goToUserLocation}
-                    className="bg-gray-800 text-white font-semibold py-2 px-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors"
+                    className="bg-gray-800 text-white p-2.5 md:p-3 rounded-full shadow-lg hover:bg-gray-700 transition-colors"
+                    title="Go to my location"
                 >
-                    <FaLocationCrosshairs />
+                    <FaLocationCrosshairs size={18} />
                 </button>
             </div>
             <div className="h-screen w-screen">
