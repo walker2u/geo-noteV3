@@ -9,11 +9,10 @@ function withValidProperties(properties) {
 export async function GET() {
   const URL = process.env.NEXT_PUBLIC_URL;
   return Response.json({
-    accountAssociation: {
-      // these will be added in step 5
-      header: "",
-      payload: "",
-      signature: "",
+    "accountAssociation": {
+      "header": "eyJmaWQiOjE1MDMyMzcsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg1QzA3MDVFNTk0RjBkMGM1QUMwZkJCMTI0RDA0NzEyRTdDRTJFZjk0In0",
+      "payload": "eyJkb21haW4iOiJnZW8tbm90ZS12My52ZXJjZWwuYXBwIn0",
+      "signature": "br7vgbWQyhc7ELT5AaJvB8XTPQPCXa03wKlNsAOApkQsjeq6Epbq2v/i4xuec8M96guHBgPBI50uTfLg/Jzi2xs="
     },
     baseBuilder: {
       ownerAddress: "0x", // add your Base Account address here
@@ -29,9 +28,9 @@ export async function GET() {
       subtitle: "Fast, fun, social",
       description: "A map-based notes application.",
       screenshotUrls: [
-        "https://ex.co/s1.png",
-        "https://ex.co/s2.png",
-        "https://ex.co/s3.png",
+        "https://geo-note-v3.vercel.app/s1.png",
+        "https://geo-note-v3.vercel.app/s2.png",
+        "https://geo-note-v3.vercel.app/s3.png",
       ],
       primaryCategory: "social",
       tags: ["example", "miniapp", "baseapp"],
