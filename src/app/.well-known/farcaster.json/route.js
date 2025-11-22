@@ -39,7 +39,7 @@ export async function GET() {
       ogTitle: "Example Mini App",
       ogDescription: "Challenge friends in real time.",
       ogImageUrl: "https://ex.co/og.png",
-      noindex: true,
+      // noindex: true,
     },
   }); // see the next step for the manifest_json_object
 }
